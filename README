@@ -1,0 +1,29 @@
+The role of these scripts is to take raw RNA-Seq reads (.fastq or .fq), quality check them, remove adapter sequences and low quality base calls if necessary, then align
+to a reference genome assembly (.fasta or .fa) with the aids of a genome annotation (.gtf -.gff is similar but don't use here) to produce alignment files (.bam or .sam) which
+are then quantified to read counts (.txt) for use in downstream analysis in R/Python. 
+
+It is not necessary to create output directories before running; they will be created if they don't exist.
+To run on the front end use bash. To send to compute nodes use sbatch. Script inputs use relative paths, but full paths will work too obviously. 
+
+
+1.Quality_check.sh - creates individual quality checks with FastQC and aggregates with MultiQC - look at fastqc.html files and multiqc_report.html for restults 
+TO RUN: sbatch/bash 1.Quality_check.sh reads_directory output_directory filetype[e.g .fq.gz]
+
+2.Trim_reads_parallel.sh / 2.Trim_reads.sh - removed adapters, trims lows quality base calls from 3' end (< PHRED 20) and runs quality check.
+Trim_reads_parallel should be faster. This step is optional if quality is fine and no adapters are present. Trimmed reads will hava _val_1/_val_2 added to their filenames e.g r1 becomes r1_val_1
+TO RUN: sbatch/bash 2.Trim_reads_parallel.sh reads_directory output_directory file_type[e.g .fq.gz] r1_syntax[e.g r_1] sequencing_technology[illumina or nextera].
+
+3.Make_STAR_index.sh - creates the genome index before alignment. Only necessary to run if an index is not already created. Unless using v. short/v. long reads I recommend an overhang of 100. 
+Overhang must be the same in the index and alignment steps. 
+TO RUN: sbatch/bash Make_STAR_index.sh 
+
+4.Run_alignment.sh - Aligns reads against index of genome assembly created in previous step to output BAM (alignment) files. These are large files so ensure enough space is available.
+TO RUN: sbatch/bash 4.Run_alignment.sh reads_directory output_directory r1_syntax[e.g r_1_val_1] filetype[e.g .fq.gz] gtf_file STAR_genome_index_directory overhang
+4.Run_alignment_multiple.sh allows more than 1 pair to be aligned if necessary i.e if sample split across multiple lanes. Extra argument is the syntax of the lane identifier e.g L001   
+
+5.Count_alignments.sh - Outputs counts text file (not transformed or logged) from the bam files.
+TO RUN: bash Count_alignments.sh bams_dir output_dir gtf_file
+
+
+ 
+
